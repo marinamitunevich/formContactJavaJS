@@ -122,9 +122,9 @@ class ContactFormListener {
             age: contactForm.elements.age.value,
         }
 
-        this.contactService.completeEdit(contact);
+        this.contactService.completeEdit(contact, event.currentTarget.contact);
         console.log("edit/save")
-        // TODO извменение контакта (complete edit)
+
     }
 
     cancel(event) {
@@ -181,11 +181,14 @@ class ContactRenderer {
         this.contactFormDOM.elements.firstName.value = contact.firstName;
         this.contactFormDOM.elements.lastName.value = contact.lastName;
         // this.contactFormDOM.elements.lastName.setAttribute("value", contact.lastName);
+
         this.contactFormDOM.elements.age.value = contact.age;
+
+        this.contactFormDOM.contact = contact;
     }
 
     toAddForm() {
-        //TODO убирает кнопки "save", "cancel". Отображает кнопку "add". Очищает поля ввода.
+
         this.addButtonDom.classList.remove("hide-element");
         this.editButtonDom.classList.add("hide-element");
         this.cancelButtonDom.classList.add("hide-element");
@@ -248,7 +251,7 @@ class ContactService {
         contact.id = lastIndex + 1;
         this.fakeContacts.push(contact);
 
-        // this.contactRenderer.renderContacts([contact]);
+
 
         this._reloadAll();
     }
@@ -268,8 +271,8 @@ class ContactService {
         this.contactRenderer.toEditForm(contact);
     }
 
-    completeEdit(contact) {
-        this.edit(contact);
+    completeEdit(contact, oldContact) {
+        this.edit(contact, oldContact);
         this.contactRenderer.toAddForm();
     }
 
