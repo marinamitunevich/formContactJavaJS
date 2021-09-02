@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/contacts")
 public class ContactRestController {
 
     private ContactService service;
@@ -26,7 +26,7 @@ public class ContactRestController {
         this.contactMapper = contactMapper;
     }
 
-    @GetMapping("/contact-info/{id}")
+    @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public ContactToDisplayDto contactDetail(@PathVariable(name = "id") int contactId) {
 
@@ -36,7 +36,7 @@ public class ContactRestController {
         return contactToDisplayDto;
     }
 
-    @GetMapping("/contacts")
+    @GetMapping("")
     @ResponseStatus(HttpStatus.OK)
     public List<ContactToDisplayDto> contactsPage() {
 
@@ -52,7 +52,7 @@ public class ContactRestController {
 //        return "contact-form";
 //    }
 
-    @RequestMapping(value = "/edit/{id}", method = RequestMethod.PUT)
+    @RequestMapping(value = "/{id}", method = RequestMethod.PUT)
     @ResponseStatus(HttpStatus.OK)
     public void editContact(@PathVariable(name = "id") int contactId, @RequestBody ContactToAddDto contactToAddDto) {
 
@@ -61,7 +61,7 @@ public class ContactRestController {
 
     }
 
-    @PostMapping("/save")
+    @PostMapping("")
     @ResponseStatus(HttpStatus.CREATED)
     public void saveNewContact(@RequestBody  ContactToAddDto contactToAddDto) {
 
@@ -70,7 +70,7 @@ public class ContactRestController {
     }
 
 
-    @RequestMapping(value = "/delete/{id}", method = RequestMethod.DELETE)
+    @RequestMapping(value = "/{id}", method = RequestMethod.DELETE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteContact(@PathVariable(name = "id") int contactId) {
 
@@ -78,7 +78,7 @@ public class ContactRestController {
 
     }
 
-    @RequestMapping(value = "/contacts/search", method = RequestMethod.GET)
+    @RequestMapping(value = "/search", method = RequestMethod.GET)
     public List<ContactToDisplayDto> searchContact(@RequestParam(name = "name", required = true) String name) {
 
         List<ContactToDisplayDto> list = service.searchByName(name)

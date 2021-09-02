@@ -1,3 +1,33 @@
+HOST = "http://localhost:8080/api/contacts"
+
+class ContactClient {
+
+    getAllContact() {
+        return fetch(HOST);
+    }
+
+    remove(id) {
+        return fetch(`${HOST}/${id}`, {
+            method: "DELETE"
+        });
+    }
+
+    edit(contact) {
+        return fetch(`${HOST}/${contact.id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(contact)
+        });
+    }
+
+    add(contact) {
+        return fetch(HOST, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(contact)
+        });
+    }
+}
 
 document.addEventListener('DOMContentLoaded', function () {
     const contactWrapperDOM = document.querySelector("#contact-wrapper");
@@ -6,13 +36,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const contactFormDOM = document.querySelector("#contact-form");
     const searchFormDOM = document.querySelector("#search-form");
 
-    const contactRenderer = new ContactRenderer(contactWrapperDOM, contactTemplateDOM, contactFormDOM, searchFormDOM);
-
-    const contactService = new ContactService(contactRenderer);
+    const contactRenderer = new ContactRenderer(contactWrapperDOM, contactTemplateDOM, contactFormDOM);
+    const contactClient = new ContactClient();
+    const contactService = new ContactService(contactRenderer, contactClient);
 
     const contactFormListener = new ContactFormListener(contactFormDOM, contactService);
     const contactWrapperListener = new ContactWrapperListener(contactService);
-    const searchFormListener = new SearchFormListener(contactService);
+    const searchFormListener = new SearchFormListener(contactService, searchFormDOM);
 
 
     contactFormDOM.addEventListener('click', contactFormListener);
@@ -21,32 +51,33 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 class SearchFormListener {
-    constructor(contactService) {
+    constructor(contactService, searchFormDOM) {
         this.contactService = contactService;
+        this.searchFormDOM = searchFormDOM;
     }
 
     handleEvent(event) {
         const aElementDom = event.target.closest("a");
-        if (aElementDom != null) {
-            this[aElementDom.dataset.action](event);
+
+        if (aElementDom !== null) {
+            const action = aElementDom.dataset.action;
+            this[action](event);
         }
     }
 
-    search(event){
+    search(event) {
+        const searchDom = event.currentTarget;
+        const searchTerm = searchDom.elements.searchName.value;
 
-        const str = event.currentTarget.elements.search.value;
-        console.log(event.currentTarget.elements.search.value);
-        this.contactService.searchInArray(str);
-
+        this.contactService.filter(searchTerm.toLowerCase());
     }
 
-    reset(event){
-        console.log("reset");
-        this.contactService.toCleanSearchForm();
-
+    reset(event) {
+        this.searchFormDOM.reset();
+        this.contactService.reloadAll();
     }
-
 }
+
 class ContactWrapperListener {
     constructor(contactService) {
         this.contactService = contactService;
@@ -76,7 +107,9 @@ class ContactWrapperListener {
     }
 
     _getContact(event) {
-
+        // const domElement = event.target.closest("li");
+        // const contact = domElement.contact;
+        // return contact;
         return event.target.closest("li").contact;
     }
 }
@@ -92,6 +125,15 @@ class ContactFormListener {
         const aElementDom = event.target.closest("a");
 
         if (aElementDom !== null) {
+            // if (aElementDom.dataset.action === "add")
+            //     this.add();
+            //     this["add"]();
+            // else if (aElementDom.dataset.action === "save")
+            //     this.save();
+            //     this["save"]();
+            // else if (aElementDom.dataset.action === "cancel")
+            //     this.cancel();
+            //     this["cancel"]();
             const action = aElementDom.dataset.action;
             this[action](event);
         }
@@ -115,16 +157,13 @@ class ContactFormListener {
 
     save(event) {
         const contactForm = event.currentTarget;
-
         const contact = {
             firstName: contactForm.elements.firstName.value,
             lastName: contactForm.elements.lastName.value,
             age: contactForm.elements.age.value,
+            id: +contactForm.elements.id.value
         }
-
-        this.contactService.completeEdit(contact, event.currentTarget.contact);
-        console.log("edit/save")
-
+        this.contactService.completeEdit(contact);
     }
 
     cancel(event) {
@@ -134,11 +173,10 @@ class ContactFormListener {
 
 class ContactRenderer {
 
-    constructor(contactWrapperDOM, contactTemplateDOM, contactFormDOM, searchFormDOM) {
+    constructor(contactWrapperDOM, contactTemplateDOM, contactFormDOM) {
         this.contactWrapperDOM = contactWrapperDOM;
         this.contactTemplateDOM = contactTemplateDOM;
         this.contactFormDOM = contactFormDOM;
-        this.searchFormDOM = searchFormDOM;
 
         this.addButtonDom = this.contactFormDOM.querySelector('a[data-action="add"]');
         this.editButtonDom = this.contactFormDOM.querySelector('a[data-action="save"]');
@@ -174,27 +212,25 @@ class ContactRenderer {
     }
 
     toEditForm(contact) {
-        this.addButtonDom.classList.add("hide-element")
-        this.editButtonDom.classList.remove('hide-element')
-        this.cancelButtonDom.classList.remove('hide-element')
+        this.addButtonDom.classList.add("hide-element");
+        this.editButtonDom.classList.remove('hide-element');
+        this.cancelButtonDom.classList.remove('hide-element');
 
         this.contactFormDOM.elements.firstName.value = contact.firstName;
-        // this.contactFormDOM.elements.lastName.value = contact.lastName;
-        this.contactFormDOM.elements.lastName.setAttribute("value", contact.lastName);
-
+        this.contactFormDOM.elements.lastName.value = contact.lastName;
+        // this.contactFormDOM.elements.lastName.setAttribute("value", contact.lastName);
         this.contactFormDOM.elements.age.value = contact.age;
-
-        this.contactFormDOM.contact = contact;
+        this.contactFormDOM.elements.id.value = contact.id;
     }
 
     toAddForm() {
-
         this.addButtonDom.classList.remove("hide-element");
-        this.editButtonDom.classList.add("hide-element");
-        this.cancelButtonDom.classList.add("hide-element");
+        this.editButtonDom.classList.add('hide-element');
+        this.cancelButtonDom.classList.add('hide-element');
 
         this.contactFormDOM.elements.firstName.value = "";
         this.contactFormDOM.elements.lastName.value = "";
+        // this.contactFormDOM.elements.lastName.setAttribute("value", "");
         this.contactFormDOM.elements.age.value = "";
         this.contactFormDOM.reset();
     }
@@ -206,103 +242,91 @@ class ContactRenderer {
     }
 
     toggleContactDetails(contactDom) {
-        contactDom.querySelector(".contact-item-details").classList.toggle("hide-element");
-    }
-    toEmptySearchForm(){
-
-        this.searchFormDOM.elements.search.value = "";
-        this.searchFormDOM.reset();
-
+        contactDom.querySelector(".contact-item-details")
+            .classList.toggle("hide-element");
     }
 }
 
 class ContactService {
 
-    fakeContacts = [
-        {firstName: "Max", lastName: "Mustermann", age: 25, id: 1},
-        {firstName: "Vasja", lastName: "Pupkin", age: 18, id: 2},
-        {firstName: "John", lastName: "Doe", age: 35, id: 3},
-        {firstName: "Mark", lastName: "Schmidt", age: 43, id: 4},
-        {firstName: "Anna", lastName: "Baumann", age: 34, id: 5}
-    ];
+    contacts;
 
-    constructor(contactRenderer) {
+    constructor(contactRenderer, contactClient) {
         this.contactRenderer = contactRenderer;
+        this.contactClient = contactClient;
 
         this.getAll();
     }
 
-    getAll() {
-        this.contactRenderer.renderContacts(this.fakeContacts);
-    }
+    // //ассинхронно
+    // getAll() {
+    //     this.contactClient
+    //         .getAllContact()
+    //         .then(response => {
+    //             return response.json();
+    //         })
+    //         .then(contactsData => {
+    //             this.contactRenderer.renderContacts(contactsData);
+    //         });
+    // }
 
-    remove(contact) {
-        // const index = this.fakeContacts.findIndex(value => value.id === contact.id);
-        const index = this.fakeContacts.indexOf(contact);
+    //синхронно
+    async getAll() {
+        const response = await this.contactClient.getAllContact();
 
-        if (index >= 0) {
-            this.fakeContacts.splice(index, 1);
-            this._reloadAll();
+        if (response.ok) {
+            const contacts = await response.json();
+            this.contacts = contacts;
+            this.contactRenderer.renderContacts(contacts)
         }
     }
 
-    add(contact) {
-        const lastIndex = this.fakeContacts[this.fakeContacts.length - 1].id;
-        contact.id = lastIndex + 1;
-        this.fakeContacts.push(contact);
+    async remove(contact) {
+        const response = await this.contactClient.remove(contact.id);
+        if (response.ok)
+            this.reloadAll();
+    }
 
-
-
-        this._reloadAll();
+    async add(contact) {
+        const response = await this.contactClient.add(contact);
+        if (response.ok)
+            this.reloadAll();
     }
 
     toggleDetails(contactDom) {
         this.contactRenderer.toggleContactDetails(contactDom);
     }
 
-    edit(contact, copyContact) {
-        const index = this.fakeContacts.indexOf(copyContact);
-        this.fakeContacts[index] = contact;
-
-        this._reloadAll();
-    }
-
     startEdit(contact) {
         this.contactRenderer.toEditForm(contact);
     }
 
-    completeEdit(contact, oldContact) {
-        this.edit(contact, oldContact);
-        this.contactRenderer.toAddForm();
+    async completeEdit(contact) {
+        if (contact.id === 0)
+            console.log("Entity not found")
+
+        const response = await this.contactClient.edit(contact);
+        if (response.ok) {
+            console.log("response from edit")
+            this.contactRenderer.toAddForm();
+            this.reloadAll();
+        }
     }
 
     cancelEdit() {
         this.contactRenderer.toAddForm();
-        
     }
 
-    _reloadAll() {
+    filter(str) {
+        this.contactRenderer.clearAll();
+        const searchResult = this.contacts
+            .filter(value => value.firstName.toLowerCase().includes(str) || value.lastName.toLowerCase().includes(str));
+        this.contactRenderer.renderContacts(searchResult);
+    }
+
+    reloadAll() {
         this.contactRenderer.clearAll();
         this.getAll();
-    }
-    toCleanSearchForm(){
-
-        this.contactRenderer.toEmptySearchForm();
-        this._reloadAll();
-
-    }
-
-    searchInArray(str){
-        
-        const newFakeContacts = this.fakeContacts.filter(function (contact) {
-            return contact.firstName.toLowerCase().includes(str.toLowerCase()) || contact.lastName.toLowerCase().includes(str.toLowerCase());
-        });
-
-        console.log(newFakeContacts)
-
-        this.contactRenderer.clearAll();
-        this.contactRenderer.renderContacts(newFakeContacts);
-        this.contactRenderer.toEmptySearchForm();
-
+        console.log(this.getAll());
     }
 }
